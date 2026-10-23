@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrunkTrack Occ NU</title>
+    <!-- เรียกใช้งาน Tailwind CSS ให้เว็บสวยหรูดูเป็นแอปโมเดิร์น -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans p-4 max-w-md mx-auto">
+
+    <!-- ส่วนหัวแอป -->
+    <div class="flex justify-between items-center mb-6 mt-2">
+        <h1 class="text-xl font-bold text-emerald-600">TrunkTrack Occ NU</h1>
+        <span id="statusBadge" class="text-xs px-3 py-1 bg-red-100 text-red-600 rounded-full font-medium">ยังไม่เชื่อมต่อ</span>
+    </div>
+
+    <!-- ปุ่มเชื่อมต่อบลูทูธ -->
+    <button id="connectBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 rounded-xl shadow-md transition mb-6 flex justify-center items-center gap-2">
+        <span>🔗 เชื่อมต่ออุปกรณ์ ESP32</span>
+    </button>
+
+    <!-- กล่องแสดงผลข้อมูล (Dashboard Cards) -->
+    <div class="grid grid-cols-2 gap-4 mb-4">
+        <!-- องศาปัจจุบัน -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+            <p class="text-xs text-slate-400 mb-1">องศาปัจจุบัน (Angle)</p>
+            <h2 id="angleVal" class="text-3xl font-extrabold text-slate-700">0°</h2>
+        </div>
+        <!-- จำนวนครั้งที่ทำผิด -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+            <p class="text-xs text-slate-400 mb-1">จำนวนครั้งที่ผิด</p>
+            <h2 id="countVal" class="text-3xl font-extrabold text-orange-500">0</h2>
+        </div>
+    </div>
+
+    <!-- สถานะท่าทาง -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-4">
+        <p class="text-xs text-slate-400 mb-1">สถานะท่าทาง</p>
+        <h3 id="statusText" class="text-lg font-bold text-slate-600">ปกติ</h3>
+    </div>
+
+    <!-- ปุ่มทดสอบระบบสั่น -->
+    <button onclick="triggerVibration()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium py-2.5 rounded-xl transition">
+        📳 ทดสอบระบบสั่นมือถือ
+    </button>
+
+    <!-- ส่วนเขียนโค้ดเชื่อมต่อบลูทูธ (Web Bluetooth API) -->
+    <script>
+        let bluetoothDevice;
+        let bluetoothCharacteristic;
+        let errorCount = 0;
+
+        // กำหนด UUID ให้ตรงกับโค้ดในบอร์ด ESP32
+        const SERVICE_UUID = "12345678-1234-1234-1234-1234567890ab";
+        const CHARACTERISTIC_UUID = "87654321-4321-4321-4321-ba0987654321";
+
+        document.getElementById('connectBtn').addEventListener('click', async () => {
+            try {
+                document.getElementById('statusBadge').innerText = "กำลังค้นหา...";
+                document.getElementById('statusBadge').className = "text-xs px-3 py-1 bg-yellow-100 text-yellow-600 rounded-full font-medium";
+
+                // เปิดหน้าต่างสแกนหาบลูทูธ ESP32
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [SERVICE_UUID]
+                });
+
+                const server = await bluetoothDevice.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                bluetoothCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+
+                // เริ่มรับข้อมูลแบบเรียลไทม์
+                await bluetoothCharacteristic.startNotifications();
+                bluetoothCharacteristic.addEventListener('characteristicvaluechanged', handleIncomingData);
+
+                document.getElementById('statusBadge').innerText = "เชื่อมต่อแล้ว";
+                document.getElementById('statusBadge').className = "text-xs px-3 py-1 bg-emerald-100 text-emerald-600 rounded-full font-medium";
+                document.getElementById('connectBtn').innerText = "เชื่อมต่อสำเร็จ ✅";
+                document.getElementById('connectBtn').classList.remove('bg-emerald-600');
+                document.getElementById('connectBtn').classList.add('bg-slate-700');
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById('statusBadge').innerText = "เชื่อมต่อไม่สำเร็จ";
+                document.getElementById('statusBadge').className = "text-xs px-3 py-1 bg-red-100 text-red-600 rounded-full font-medium";
+            }
+        });
+
+        // ฟังก์ชันรับข้อมูลจาก ESP32
+        function handleIncomingData(event) {
+            const value = new TextDecoder().decode(event.target.value);
+            document.getElementById('angleVal').innerText = value + "°";
+
+            let angle = parseFloat(value);
+            if (angle > 20) { // สมมติถ้าก้มเกิน 20 องศาถือว่าผิดท่า
+                errorCount++;
+                document.getElementById('countVal').innerText = errorCount;
+                document.getElementById('statusText').innerText = "⚠️ เตือน: หลังค่อม/ก้มตัวเกินกำหนด!";
+                document.getElementById('statusText').className = "text-lg font-bold text-red-500";
+                
+                // สั่งมือถือสั่นแจ้งเตือนทันที!
+                triggerVibration();
+            } else {
+                document.getElementById('statusText').innerText = "✅ ท่าทางปกติ";
+                document.getElementById('statusText').className = "text-lg font-bold text-emerald-600";
+            }
+        }
+
+        // ฟังก์ชันสั่งมือถือสั่น
+        function triggerVibration() {
+            if ("vibrate" in navigator) {
+                navigator.vibrate([300, 100, 300]); // สั่น 2 จังหวะ
+            }
+        }
+    </script>
+</body>
+</html>
