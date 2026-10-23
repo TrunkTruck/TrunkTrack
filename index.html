@@ -1,285 +1,235 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrunkTrack Ergonomics</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TrunkTrack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;700&display=swap">
+<style>
+:root{--bg:#f4f7f6;--card:#fff;--tx:#17302b;--mu:#6b7f7a;--bd:#e3ebe8;--g:#22b07d;--y:#f5a524;--o:#f97316;--r:#e5484d;--c:var(--g)}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1715;--card:#18221f;--tx:#e8f2ef;--mu:#8aa09a;--bd:#263431}}
+*{box-sizing:border-box;margin:0}
+body{font-family:'Noto Sans Thai',system-ui,sans-serif;background:var(--bg);color:var(--tx);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);min-height:100vh}
+main{max-width:480px;margin:0 auto;padding:16px 16px 40px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+h1{font-size:22px}h1 small{display:block;font-size:12px;color:var(--mu);font-weight:400}
+.chip{font-size:12px;padding:4px 10px;border-radius:99px;background:var(--bd);color:var(--mu)}
+.chip.on{background:#d9f5ea;color:#0b7a53}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:20px;padding:16px;margin-bottom:12px}
+.gauge{position:relative;width:200px;height:200px;margin:4px auto}
+.gauge svg{transform:rotate(-90deg)}
+.gauge .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.big{font-size:46px;font-weight:700;color:var(--c);line-height:1}
+.dir{font-size:15px;margin-top:4px;color:var(--c);font-weight:500}
+.status{text-align:center;font-size:14px;color:var(--mu);margin-top:6px}
+.row{display:flex;gap:8px;margin-top:12px}
+.row>div{flex:1;text-align:center;background:var(--bg);border-radius:14px;padding:10px 4px}
+.row b{display:block;font-size:20px}.row span{font-size:11px;color:var(--mu)}
+button{font:inherit;border:0;border-radius:14px;padding:12px 16px;background:var(--g);color:#fff;font-weight:500;cursor:pointer;width:100%}
+button.sec{background:var(--bd);color:var(--tx)}
+.btns{display:flex;gap:8px;margin-top:10px}
+h2{font-size:15px;margin-bottom:8px}
+.ev{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid var(--bd);font-size:14px}
+.ev:first-of-type{border-top:0}.ev small{color:var(--mu);display:block;font-size:12px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.tabs{display:flex;background:var(--bd);border-radius:14px;padding:4px;margin-bottom:12px}
+.tabs button{background:none;color:var(--mu);padding:8px}.tabs button.a{background:var(--card);color:var(--tx)}
+details{border-top:1px solid var(--bd);padding:8px 0}summary{cursor:pointer;display:flex;justify-content:space-between;font-size:14px}
+input[type=text]{width:100%;font:inherit;font-size:12px;padding:8px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);margin:4px 0 8px}
+label{font-size:12px;color:var(--mu)}
+.empty{color:var(--mu);font-size:13px;text-align:center;padding:10px}
+#toast{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 10px);max-width:456px;margin:auto;background:#17302b;color:#fff;border-radius:16px;padding:12px 16px;font-size:14px;transform:translateY(-140%);transition:transform .3s;z-index:9;box-shadow:0 8px 24px #0004}
+#toast.s{transform:none}#toast b{display:block}
+.hide{display:none}
+</style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans p-3 max-w-4xl mx-auto">
+<body>
+<div id="toast"><b id="tt"></b><span id="tb"></span></div>
+<main>
+<header><h1>TrunkTrack<small>สายรัดหลังส่วนล่าง · เฝ้าระวังท่าทาง</small></h1><span class="chip" id="conn">ยังไม่เชื่อมต่อ</span></header>
 
-    <!-- Header -->
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-4 flex flex-wrap justify-between items-center gap-2">
-        <div>
-            <div class="flex items-center gap-2">
-                <span class="text-xl">💚</span>
-                <h1 class="text-lg font-bold text-slate-800">TrunkTrack <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">BNO055 Health</span></h1>
-            </div>
-            <p class="text-xs text-slate-500">สายรัดตรวจจับมุมก้มหลังส่วนล่าง (> 20°)</p>
-        </div>
-        <div class="flex items-center gap-2 text-xs">
-            <span class="bg-slate-100 px-2.5 py-1 rounded-lg">🔋 92%</span>
-            <button id="connectBtn" onclick="connectBluetooth()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1.5 rounded-lg transition shadow-sm cursor-pointer">
-                🔗 เชื่อมต่อ ESP32
-            </button>
-        </div>
+<div class="tabs"><button class="a" data-t="home">วันนี้</button><button data-t="hist">ประวัติ 30 วัน</button><button data-t="set">ตั้งค่า</button></div>
+
+<section id="home">
+  <div class="card">
+    <div class="gauge">
+      <svg width="200" height="200" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="var(--bd)" stroke-width="10"/><circle id="ring" cx="60" cy="60" r="52" fill="none" stroke="var(--c)" stroke-width="10" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7" style="transition:stroke-dashoffset .25s"/></svg>
+      <div class="mid"><div class="big"><span id="ang">0</span>°</div><div class="dir" id="dir">ท่าปกติ</div></div>
     </div>
+    <div class="status" id="status">กดเชื่อมต่อเพื่อเริ่มติดตาม</div>
+    <div class="row"><div><b id="pv">0.0°</b><span>ก้ม/เงย (Pitch)</span></div><div><b id="rv">0.0°</b><span>เอียง (Roll)</span></div></div>
+    <div class="btns"><button id="btnConn">เชื่อมต่อบลูทูธ</button><button class="sec" id="btnCal" style="width:auto;white-space:nowrap">ตั้งท่าตรง</button></div>
+  </div>
+  <div class="card"><h2>สรุปวันนี้</h2>
+    <div class="row" style="margin-top:0"><div><b id="sCount">0</b><span>จำนวนครั้ง</span></div><div><b id="sTime">0 วิ</b><span>เวลารวม</span></div><div><b id="sMax">0°</b><span>มุมสูงสุด</span></div></div>
+  </div>
+  <div class="card"><h2>เหตุการณ์วันนี้</h2><div id="todayList"></div></div>
+</section>
 
-    <!-- Live Posture Simulation Card -->
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-4">
-        <h2 class="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">ภาพจำลองสรีระการสวมสายรัด</h2>
-        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div class="relative w-48 h-48 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center p-2">
-                <svg viewBox="0 0 100 100" class="w-full h-full">
-                    <line x1="50" y1="90" x2="50" y2="40" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
-                    <line id="spineIndicator" x1="50" y1="90" x2="50" y2="40" stroke="#10b981" stroke-width="4" stroke-linecap="round" class="transition-all duration-300"/>
-                    <circle cx="50" cy="90" r="6" fill="#64748b"/>
-                    <circle id="sensorNode" cx="50" cy="65" r="5" fill="#10b981"/>
-                    <path id="dangerArc" d="M 50 65 A 25 25 0 0 1 70 85" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="2,2" class="opacity-0"/>
-                </svg>
-                <span class="absolute bottom-2 left-2 text-[10px] text-slate-400">Lumbar L3-L5</span>
-            </div>
-            <div class="flex-1 w-full grid grid-cols-2 gap-3">
-                <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <span class="text-xs text-slate-400">มุมก้มปัจจุบัน (Pitch)</span>
-                    <div class="text-2xl font-extrabold text-slate-700 mt-1"><span id="pitchVal">0.0</span>°</div>
-                    <span id="pitchStatus" class="text-[11px] text-emerald-600 font-medium">สรีระตรงตามหลักการ</span>
-                </div>
-                <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <span class="text-xs text-slate-400">มุมเอียง (Roll)</span>
-                    <div class="text-2xl font-extrabold text-slate-700 mt-1"><span id="rollVal">0.0</span>°</div>
-                    <span class="text-[11px] text-slate-500 font-medium">สมดุลดี</span>
-                </div>
-                <div class="col-span-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex justify-between items-center">
-                    <span class="text-xs text-slate-600">ตำแหน่งศูนย์อ้างอิง (Tare Offset)</span>
-                    <button onclick="tareSensor()" class="text-xs bg-white border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-100">เทียบศูนย์ 0° ขณะนั่งหลังตรง</button>
-                </div>
-            </div>
-        </div>
-    </div>
+<section id="hist" class="hide"><div class="card"><h2>ย้อนหลัง 1 เดือน</h2><div id="histList"></div></div></section>
 
-    <!-- Simulation Tester Panel -->
-    <div class="bg-amber-50 border border-amber-200 p-3 rounded-2xl mb-4 text-xs">
-        <span class="font-semibold text-amber-800 block mb-1.5">⚡ ทดสอบโหมดจำลอง BNO055 (คลิกเพื่อทดสอบการแจ้งเตือนสั่น):</span>
-        <div class="flex flex-wrap gap-2">
-            <button onclick="simulateAngle(0)" class="bg-white border border-amber-300 px-3 py-1 rounded-lg hover:bg-amber-100">ตัวตรง 0° (ปกติ)</button>
-            <button onclick="simulateAngle(15)" class="bg-white border border-amber-300 px-3 py-1 rounded-lg hover:bg-amber-100">ก้ม 15° (ไม่เกินเกณฑ์)</button>
-            <button onclick="simulateAngle(25)" class="bg-emerald-600 text-white px-3 py-1 rounded-lg shadow-sm">ก้ม 25° (⚠️ เตือนสั่น)</button>
-            <button onclick="simulateAngle(40)" class="bg-red-500 text-white px-3 py-1 rounded-lg shadow-sm">ก้ม 40° (🚨 หลังค่อมมาก)</button>
-        </div>
-    </div>
+<section id="set" class="hide">
+  <div class="card"><h2>การเชื่อมต่อ (BLE ของ ESP32)</h2>
+    <label>Service UUID</label><input type="text" id="uSvc">
+    <label>Characteristic UUID (แบบ Notify)</label><input type="text" id="uChr">
+    <button class="sec" id="btnSave">บันทึก UUID</button>
+  </div>
+  <div class="card"><h2>โหมดทดสอบ (ไม่ต้องมีอุปกรณ์)</h2>
+    <label>ก้ม/เงย (Pitch): <span id="dpv">0</span>°</label><input type="range" id="dp" min="-90" max="90" value="0" style="width:100%">
+    <label>เอียง (Roll): <span id="drv">0</span>°</label><input type="range" id="dr" min="-90" max="90" value="0" style="width:100%">
+    <button class="sec" id="btnDemo" style="margin-top:8px">เริ่มโหมดทดสอบ</button>
+  </div>
+  <div class="card"><button class="sec" id="btnClear">ล้างประวัติทั้งหมด</button></div>
+</section>
+</main>
 
-    <!-- Stats Grid -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200">
-            <span class="text-xs text-slate-400 block">ก้มเกิน 20° วันนี้</span>
-            <div class="text-2xl font-extrabold text-slate-700 mt-1"><span id="errorCount">0</span> ครั้ง</div>
-            <span class="text-[10px] text-slate-400">เป้าหมาย: < 15 ครั้ง/วัน</span>
-        </div>
-        <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200">
-            <span class="text-xs text-slate-400 block">เวลาก้มค้างสะสมวันนี้</span>
-            <div class="text-2xl font-extrabold text-amber-600 mt-1"><span id="totalDuration">0</span> วินาที</div>
-            <span class="text-[10px] text-slate-400">เฉลี่ยต่อรอบ: 0.0 วิ</span>
-        </div>
-        <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200">
-            <span class="text-xs text-slate-400 block">คะแนนการศาสตร์</span>
-            <div class="text-2xl font-extrabold text-emerald-600 mt-1">100%</div>
-            <span class="text-[10px] text-emerald-600 font-medium">ดีเยี่ยม (มุม ≤ 20°)</span>
-        </div>
-        <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200">
-            <span class="text-xs text-slate-400 block">สถิติสะสม 30 วัน</span>
-            <div class="text-2xl font-extrabold text-blue-600 mt-1">239 ครั้ง</div>
-            <span class="text-[10px] text-slate-400">เฉลี่ยวันละ 8.0 ครั้ง</span>
-        </div>
-    </div>
+<script>
+const $ = id => document.getElementById(id);
+const LV = [{n:'ปกติ',c:'#22b07d',v:0},{n:'เบา',c:'#f5a524',v:1000},{n:'ปานกลาง',c:'#f97316',v:3000},{n:'รุนแรง',c:'#e5484d',v:5000}];
+const DEF = {svc:'6e400001-b5a3-f393-e0a9-e50e24dcca9e', chr:'6e400003-b5a3-f393-e0a9-e50e24dcca9e'};
+const S = {on:false, demo:false, dev:null, p:0, r:0, off:{p:0,r:0}, alerted:0, ev:null, events:[], raw:{p:0,r:0}, buf:'', timer:null};
+const ls = {get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}, set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
 
-    <!-- Charts Section -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-            <h3 class="text-xs font-semibold text-slate-500 mb-3">📈 แนวโน้มสถิติก้มผิดท่า (Daily Trend)</h3>
-            <canvas id="dailyChart" height="140"></canvas>
-        </div>
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-            <h3 class="text-xs font-semibold text-slate-500 mb-3">⏰ ช่วงเวลาที่เกิดเหตุการณ์บ่อย</h3>
-            <canvas id="hourlyChart" height="140"></canvas>
-        </div>
-    </div>
+/* ---------- เก็บข้อมูล 30 วัน ---------- */
+function load(){ const lim = Date.now()-30*864e5; S.events = ls.get('tt_events',[]).filter(e=>e.t>=lim); S.off = ls.get('tt_off',S.off); }
+function save(){ S.events = S.events.filter(e=>e.t>=Date.now()-30*864e5); ls.set('tt_events',S.events); }
+const dayKey = t => { const d=new Date(t); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const hm = t => new Date(t).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',hour12:false});
+const fd = s => s<60 ? s+' วิ' : Math.floor(s/60)+' นาที '+(s%60)+' วิ';
 
-    <!-- Logs Table -->
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6">
-        <div class="flex justify-between items-center mb-3">
-            <h3 class="text-xs font-semibold text-slate-500">📋 บันทึกเวลาจริงที่เกิดเหตุการณ์เกิน 20°</h3>
-            <div class="flex gap-2">
-                <button onclick="exportCSV()" class="text-xs bg-slate-100 px-2.5 py-1 rounded-lg hover:bg-slate-200">📥 ดาวน์โหลด CSV</button>
-            </div>
-        </div>
-        <div class="overflow-x-auto max-h-60">
-            <table class="w-full text-left text-xs">
-                <thead class="bg-slate-50 text-slate-400 sticky top-0">
-                    <tr>
-                        <th class="p-2">เวลา (Real-Time)</th>
-                        <th class="p-2">วันที่</th>
-                        <th class="p-2">ท่าทาง</th>
-                        <th class="p-2">มุมสูงสุด</th>
-                        <th class="p-2">ระยะเวลาก้มค้าง</th>
-                        <th class="p-2">การสั่น</th>
-                    </tr>
-                </thead>
-                <tbody id="logTableBody" class="divide-y divide-slate-100">
-                    <tr>
-                        <td colspan="6" class="p-4 text-center text-slate-400">ยังไม่มีประวัติการก้มผิดท่าวันนี้</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+/* ---------- แจ้งเตือน ---------- */
+let tmo;
+function toast(t,b=''){ $('tt').textContent=t; $('tb').textContent=b; $('toast').classList.add('s'); clearTimeout(tmo); tmo=setTimeout(()=>$('toast').classList.remove('s'),4000); }
+async function popup(title,body){
+  toast(title,body);
+  if(!('Notification' in window) || Notification.permission!=='granted') return;
+  try{
+    const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
+    if(reg) reg.showNotification(title,{body,tag:'trunktrack',renotify:true,icon:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#22b07d"/><text x="32" y="43" font-size="30" text-anchor="middle" fill="#fff">T</text></svg>')});
+    else new Notification(title,{body,tag:'trunktrack'});
+  }catch(e){}
+}
+function alertUser(lvl,dir,ang){
+  if(navigator.vibrate) navigator.vibrate(LV[lvl].v);
+  popup('⚠️ ท่าทางไม่เหมาะสม ('+LV[lvl].n+')', dir+' '+ang.toFixed(0)+'° — ปรับหลังให้ตรง');
+}
 
-    <script>
-        let errorCount = 0;
-        let totalSec = 0;
-        let logData = [];
+/* ---------- ประมวลผลข้อมูลมุม ---------- */
+function direction(p,r){
+  if(Math.abs(p)>=Math.abs(r)) return p>0 ? 'ก้มหน้า' : 'แหงนหลัง';
+  return r>0 ? 'เอียงขวา' : 'เอียงซ้าย';
+}
+function process(rawP,rawR){
+  S.raw={p:rawP,r:rawR};
+  const p = rawP-S.off.p, r = rawR-S.off.r, ang = Math.max(Math.abs(p),Math.abs(r));
+  S.p=p; S.r=r;
+  const lvl = ang>60?3 : ang>20?2 : ang>(S.ev?4:5)?1 : 0;   // hysteresis กันค่ากระเพื่อม
+  const dir = direction(p,r), now = Date.now();
+  if(lvl===0){ if(S.ev) closeEvent(); S.alerted=0; }
+  else if(!S.ev){                                           // เริ่มทำผิดครั้งแรก → เตือน
+    S.ev={t:now,dur:0,max:ang,dir,lvl};
+    S.alerted=lvl; alertUser(lvl,dir,ang);
+  } else {                                                  // ค้างอยู่ → เงียบ (เตือนซ้ำเฉพาะเมื่อรุนแรงขึ้นกว่าเดิม)
+    if(ang>S.ev.max){S.ev.max=ang;S.ev.dir=dir;}
+    if(lvl>S.alerted){S.alerted=lvl;S.ev.lvl=lvl;alertUser(lvl,dir,ang);}
+  }
+  paint(ang,lvl,dir);
+}
+function closeEvent(){
+  if(!S.ev) return;
+  S.ev.dur = Math.max(1,Math.round((Date.now()-S.ev.t)/1000));
+  S.events.push({...S.ev, max:Math.round(S.ev.max)}); S.ev=null; save(); renderStats();
+}
 
-        async function connectBluetooth() {
-            try {
-                const btn = document.getElementById('connectBtn');
-                btn.innerText = "กำลังค้นหา...";
-                
-                // ขอเชื่อมต่ออุปกรณ์บลูทูธทั้งหมด (รองรับ ESP32 ทุกชื่อ)
-                const device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: ['12345678-1234-1234-1234-1234567890ab']
-                });
+/* ---------- แสดงผล ---------- */
+function paint(ang,lvl,dir){
+  const c = LV[lvl].c; document.documentElement.style.setProperty('--c',c);
+  $('ang').textContent = ang.toFixed(0);
+  $('ring').style.strokeDashoffset = 326.7*(1-Math.min(ang,90)/90);
+  $('dir').textContent = lvl ? dir+' · '+LV[lvl].n : 'ท่าปกติ';
+  $('pv').textContent = S.p.toFixed(1)+'°'; $('rv').textContent = S.r.toFixed(1)+'°';
+  $('status').textContent = lvl ? 'กำลังทำผิดท่า '+fd(Math.round((Date.now()-S.ev.t)/1000)) : (S.on||S.demo ? 'ท่าทางดี 👍' : 'กดเชื่อมต่อเพื่อเริ่มติดตาม');
+}
+function evRow(e){ return `<div class="ev"><div><span class="dot" style="background:${LV[e.lvl].c}"></span>${hm(e.t)} น. · ${e.dir}<small>มุมสูงสุด ${e.max}°</small></div><b>${fd(e.dur)}</b></div>`; }
+function renderStats(){
+  const k = dayKey(Date.now()), td = S.events.filter(e=>dayKey(e.t)===k);
+  $('sCount').textContent = td.length;
+  $('sTime').textContent = fd(td.reduce((a,e)=>a+e.dur,0));
+  $('sMax').textContent = Math.max(0,...td.map(e=>e.max))+'°';
+  $('todayList').innerHTML = td.length ? td.slice().reverse().map(evRow).join('') : '<div class="empty">ยังไม่มีการทำผิดท่าวันนี้ 🎉</div>';
+  const days = {}; S.events.forEach(e=>(days[dayKey(e.t)]??=[]).push(e));
+  const keys = Object.keys(days).sort().reverse();
+  $('histList').innerHTML = keys.length ? keys.map(d=>{
+    const a=days[d], tot=a.reduce((x,e)=>x+e.dur,0);
+    return `<details><summary><span>${new Date(d+'T00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'})}</span><span>${a.length} ครั้ง · ${fd(tot)}</span></summary>${a.slice().reverse().map(evRow).join('')}</details>`;
+  }).join('') : '<div class="empty">ยังไม่มีข้อมูลย้อนหลัง</div>';
+}
 
-                const server = await device.gatt.connect();
-                btn.innerText = "เชื่อมต่อแล้ว ✅";
-                btn.classList.replace('bg-emerald-600', 'bg-slate-700');
-                
-                device.addEventListener('gattserverdisconnected', () => {
-                    btn.innerText = "🔗 เชื่อมต่อ ESP32";
-                    btn.classList.replace('bg-slate-700', 'bg-emerald-600');
-                });
-            } catch (error) {
-                console.error(error);
-                document.getElementById('connectBtn').innerText = "เชื่อมต่อไม่สำเร็จ ❌";
-                setTimeout(() => {
-                    document.getElementById('connectBtn').innerText = "🔗 เชื่อมต่อ ESP32";
-                }, 3000);
-            }
-        }
+/* ---------- แปลงข้อมูลจาก ESP32 ---------- */
+// รองรับ: "pitch,roll" | "P:12.5,R:-3" | JSON {"pitch":..,"roll":..} | ขึ้นบรรทัดใหม่ท้ายข้อความ
+function parse(txt){
+  txt = txt.trim(); if(!txt) return null;
+  try{ const j=JSON.parse(txt); if(j&&typeof j==='object'){ const p=j.pitch??j.p??j.y??j.x, r=j.roll??j.r??j.z; if(isFinite(p)) return [+p,+(r||0)]; } }catch{}
+  const m = txt.match(/-?\d+(?:\.\d+)?/g); if(!m) return null;
+  return [parseFloat(m[0]), m[1]!==undefined?parseFloat(m[1]):0];
+}
+function onData(e){
+  if(!S.on) return;                                         // ป้องกันแอปค้างถ้าบลูทูธยังไม่พร้อม
+  S.buf += new TextDecoder().decode(e.target.value);
+  const lines = S.buf.split(/\r?\n/); S.buf = lines.pop();
+  lines.forEach(l=>{const v=parse(l); if(v) process(v[0],v[1]);});
+  if(S.buf){ const v=parse(S.buf); if(v && /\d\s*$/.test(S.buf) && S.buf.length>3){ S.buf=''; process(v[0],v[1]); } }
+  if(S.buf.length>200) S.buf='';
+}
 
-        function simulateAngle(angle) {
-            updateDashboard(angle, 1.5);
-        }
+/* ---------- บลูทูธ ---------- */
+function setConn(on,name=''){
+  S.on=on; $('conn').textContent = on ? 'เชื่อมต่อ '+(name||'แล้ว') : 'ยังไม่เชื่อมต่อ'; $('conn').classList.toggle('on',on);
+  $('btnConn').textContent = on ? 'ตัดการเชื่อมต่อ' : 'เชื่อมต่อบลูทูธ';
+  clearInterval(S.timer); S.timer=null;
+  if(on) S.timer=setInterval(()=>{ if(S.on||S.demo) process(S.raw.p,S.raw.r); },1000);  // นาฬิกาทำงานเฉพาะตอนเชื่อมต่อสำเร็จ
+  else if(!S.demo){ closeEvent(); paint(0,0,''); }
+}
+async function connect(){
+  if(S.on){ S.dev?.gatt?.connected && S.dev.gatt.disconnect(); setConn(false); return; }
+  if(!navigator.bluetooth){ toast('เบราว์เซอร์นี้ไม่รองรับ Web Bluetooth','ใช้ Chrome บน Android หรือคอมพิวเตอร์ (iPhone ไม่รองรับ)'); return; }
+  if('Notification' in window && Notification.permission==='default') await Notification.requestPermission();
+  try{
+    const svc=$('uSvc').value.trim().toLowerCase(), chr=$('uChr').value.trim().toLowerCase();
+    S.dev = await navigator.bluetooth.requestDevice({acceptAllDevices:true, optionalServices:[svc]});
+    S.dev.addEventListener('gattserverdisconnected',()=>{ if(S.on){ setConn(false); toast('การเชื่อมต่อหลุด','กดเชื่อมต่อใหม่อีกครั้ง'); } });
+    $('status').textContent='กำลังเชื่อมต่อ...';
+    const srv = await S.dev.gatt.connect();
+    const c = await (await srv.getPrimaryService(svc)).getCharacteristic(chr);
+    await c.startNotifications(); c.addEventListener('characteristicvaluechanged',onData);
+    S.buf=''; setConn(true,S.dev.name||''); toast('เชื่อมต่อสำเร็จ','กำลังรับข้อมูลจากสายรัด');
+  }catch(e){ setConn(false); if(e.name!=='NotFoundError') toast('เชื่อมต่อไม่สำเร็จ',e.message); else $('status').textContent='ยกเลิกการเชื่อมต่อ'; }
+}
 
-        function updateDashboard(pitch, roll) {
-            document.getElementById('pitchVal').innerText = pitch.toFixed(1);
-            document.getElementById('rollVal').innerText = roll.toFixed(1);
+/* ---------- UI ---------- */
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('a',x===b));
+  ['home','hist','set'].forEach(id=>$(id).classList.toggle('hide',id!==b.dataset.t));
+});
+$('btnConn').onclick=connect;
+$('btnCal').onclick=()=>{ S.off={p:S.raw.p,r:S.raw.r}; ls.set('tt_off',S.off); process(S.raw.p,S.raw.r); toast('ตั้งค่าท่าตรงแล้ว','ใช้ท่าปัจจุบันเป็น 0°'); };
+$('btnSave').onclick=()=>{ ls.set('tt_uuid',{svc:$('uSvc').value.trim(),chr:$('uChr').value.trim()}); toast('บันทึกแล้ว'); };
+$('btnClear').onclick=()=>{ if(confirm('ล้างประวัติทั้งหมด?')){ S.events=[]; save(); renderStats(); } };
+const demoIn=()=>{ $('dpv').textContent=$('dp').value; $('drv').textContent=$('dr').value; if(S.demo) process(+$('dp').value,+$('dr').value); };
+$('dp').oninput=$('dr').oninput=demoIn;
+$('btnDemo').onclick=async()=>{
+  S.demo=!S.demo; $('btnDemo').textContent=S.demo?'หยุดโหมดทดสอบ':'เริ่มโหมดทดสอบ';
+  if(S.demo){ if('Notification' in window && Notification.permission==='default') await Notification.requestPermission();
+    if(!S.timer) S.timer=setInterval(()=>{ if(S.on||S.demo) process(S.raw.p,S.raw.r); },1000); demoIn(); }
+  else if(!S.on){ clearInterval(S.timer); S.timer=null; closeEvent(); paint(0,0,''); }
+};
 
-            const indicator = document.getElementById('spineIndicator');
-            const node = document.getElementById('sensorNode');
-            const arc = document.getElementById('dangerArc');
-            
-            if (pitch > 20) {
-                indicator.setAttribute('stroke', '#ef4444');
-                node.setAttribute('fill', '#ef4444');
-                arc.classList.remove('opacity-0');
-                document.getElementById('pitchStatus').innerText = "⚠️ เตือน: หลังค่อม/ก้มเกิน 20°";
-                document.getElementById('pitchStatus').className = "text-[11px] text-red-500 font-bold";
-
-                // สั่งมือถือสั่นเตือน
-                if ("vibrate" in navigator) {
-                    navigator.vibrate([300, 100, 300, 100, 500]);
-                }
-
-                errorCount++;
-                totalSec += 4.5;
-                document.getElementById('errorCount').innerText = errorCount;
-                document.getElementById('totalDuration').innerText = totalSec.toFixed(0);
-
-                const now = new Date();
-                const timeStr = now.toTimeString().split(' ')[0] + " น.";
-                const dateStr = now.toISOString().split('T')[0];
-
-                logData.unshift({
-                    time: timeStr,
-                    date: dateStr,
-                    type: pitch > 35 ? "ก้มหน้ามาก / หลังค่อม" : "เอียงตัวซ้าย/ขวา",
-                    angle: "+" + pitch.toFixed(1) + "°",
-                    duration: "4.5 วินาที",
-                    vibrate: pitch > 35 ? "สั่นสูง" : "สั่นปานกลาง"
-                });
-
-                renderTable();
-            } else {
-                indicator.setAttribute('stroke', '-10b981');
-                indicator.setAttribute('stroke', '#10b981');
-                node.setAttribute('fill', '#10b981');
-                arc.classList.add('opacity-0');
-                document.getElementById('pitchStatus').innerText = "สรีระตรงตามหลักการ";
-                document.getElementById('pitchStatus').className = "text-[11px] text-emerald-600 font-medium";
-            }
-        }
-
-        function renderTable() {
-            const tbody = document.getElementById('logTableBody');
-            tbody.innerHTML = logData.map(item => `
-                <tr class="hover:bg-slate-50">
-                    <td class="p-2 font-medium">${item.time}</td>
-                    <td class="p-2 text-slate-500">${item.date}</td>
-                    <td class="p-2 text-amber-600 font-medium">${item.type}</td>
-                    <td class="p-2 font-bold">${item.angle}</td>
-                    <td class="p-2">${item.duration}</td>
-                    <td class="p-2"><span class="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[10px]">${item.vibrate}</span></td>
-                </tr>
-            `).join('');
-        }
-
-        function tareSensor() {
-            alert("เทียบศูนย์เซ็นเซอร์ BNO055 สำเร็จ (0° เรียบร้อย)");
-        }
-
-        function exportCSV() {
-            let csvContent = "data:text/csv;charset=utf-8,Time,Date,Type,Angle,Duration,Vibration\n" 
-                + logData.map(e => ${e.time},${e.date},${e.type},${e.angle},${e.duration},${e.vibrate}).join("\n");
-            let encodedUri = encodeURI(csvContent);
-            let link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "TrunkTrack_Ergonomics_Log.csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        const ctxDaily = document.getElementById('dailyChart').getContext('2d');
-        new Chart(ctxDaily, {
-            type: 'bar',
-            data: {
-                labels: ['10-18', '10-19', '10-20', '10-21', '10-22', '10-23', 'วันนี้'],
-                datasets: [{
-                    label: 'ครั้งที่ก้มเกิน 20°',
-                    data: [4, 12, 2, 5, 5, 4, 0],
-                    backgroundColor: ['#cbd5e1', '#ef4444', '#cbd5e1', '#cbd5e1', '#cbd5e1', '#cbd5e1', '#10b981'],
-                    borderRadius: 6
-                }]
-            },
-            options: { responsive: true, plugins: { legend: { display: false } } }
-        });
-
-        const ctxHourly = document.getElementById('hourlyChart').getContext('2d');
-        new Chart(ctxHourly, {
-            type: 'bar',
-            data: {
-                labels: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00'],
-                datasets: [{
-                    label: 'ความถี่',
-                    data: [3, 5, 6, 8, 9, 1],
-                    backgroundColor: '#f87171',
-                    borderRadius: 4
-                }]
-            },
-            options: { responsive: true, plugins: { legend: { display: false } } }
-        });
-    </script>
+load();
+const u = ls.get('tt_uuid',DEF); $('uSvc').value=u.svc; $('uChr').value=u.chr;
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+window.addEventListener('beforeunload',closeEvent);
+renderStats(); paint(0,0,'');
+</script>
 </body>
 </html>
