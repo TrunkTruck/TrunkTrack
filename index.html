@@ -3,116 +3,290 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrunkTrack Occ NU</title>
-    <!-- เรียกใช้งาน Tailwind CSS ให้เว็บสวยหรูดูเป็นแอปโมเดิร์น -->
+    <title>TrunkTrack Ergonomics</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans p-4 max-w-md mx-auto">
+<body class="bg-slate-100 text-slate-800 font-sans p-3 max-w-4xl mx-auto">
 
-    <!-- ส่วนหัวแอป -->
-    <div class="flex justify-between items-center mb-6 mt-2">
-        <h1 class="text-xl font-bold text-emerald-600">TrunkTrack Occ NU</h1>
-        <span id="statusBadge" class="text-xs px-3 py-1 bg-red-100 text-red-600 rounded-full font-medium">ยังไม่เชื่อมต่อ</span>
-    </div>
-
-    <!-- ปุ่มเชื่อมต่อบลูทูธ -->
-    <button id="connectBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 rounded-xl shadow-md transition mb-6 flex justify-center items-center gap-2">
-        <span>🔗 เชื่อมต่ออุปกรณ์ ESP32</span>
-    </button>
-
-    <!-- กล่องแสดงผลข้อมูล (Dashboard Cards) -->
-    <div class="grid grid-cols-2 gap-4 mb-4">
-        <!-- องศาปัจจุบัน -->
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-            <p class="text-xs text-slate-400 mb-1">องศาปัจจุบัน (Angle)</p>
-            <h2 id="angleVal" class="text-3xl font-extrabold text-slate-700">0°</h2>
+    <!-- Header -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-4 flex flex-wrap justify-between items-center gap-2">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="text-xl">💚</span>
+                <h1 class="text-lg font-bold text-slate-800">TrunkTrack <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">BNO055 Health</span></h1>
+            </div>
+            <p class="text-xs text-slate-500">สายรัดตรวจจับมุมก้มหลังส่วนล่าง (> 20°)</p>
         </div>
-        <!-- จำนวนครั้งที่ทำผิด -->
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-            <p class="text-xs text-slate-400 mb-1">จำนวนครั้งที่ผิด</p>
-            <h2 id="countVal" class="text-3xl font-extrabold text-orange-500">0</h2>
+        <div class="flex items-center gap-2 text-xs">
+            <span class="bg-slate-100 px-2.5 py-1 rounded-lg">🔋 92%</span>
+            <button id="connectBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1.5 rounded-lg transition shadow-sm">
+                🔗 เชื่อมต่อ ESP32
+            </button>
         </div>
     </div>
 
-    <!-- สถานะท่าทาง -->
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-4">
-        <p class="text-xs text-slate-400 mb-1">สถานะท่าทาง</p>
-        <h3 id="statusText" class="text-lg font-bold text-slate-600">ปกติ</h3>
+    <!-- Live Posture Simulation Card -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-4">
+        <h2 class="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">ภาพจำลองสรีระการสวมสายรัด</h2>
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="relative w-48 h-48 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center p-2">
+                <!-- SVG Visualization of Spine/Trunk -->
+                <svg viewBox="0 0 100 100" class="w-full h-full">
+                    <line x1="50" y1="90" x2="50" y2="40" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+                    <line id="spineIndicator" x1="50" y1="90" x2="50" y2="40" stroke="#10b981" stroke-width="4" stroke-linecap="round" class="transition-all duration-300"/>
+                    <circle cx="50" cy="90" r="6" fill="#64748b"/>
+                    <circle id="sensorNode" cx="50" cy="65" r="5" fill="#10b981"/>
+                    <path id="dangerArc" d="M 50 65 A 25 25 0 0 1 70 85" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="2,2" class="opacity-0"/>
+                </svg>
+                <span class="absolute bottom-2 left-2 text-[10px] text-slate-400">Lumbar L3-L5</span>
+            </div>
+            <div class="flex-1 w-full grid grid-cols-2 gap-3">
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <span class="text-xs text-slate-400">มุมก้มปัจจุบัน (Pitch)</span>
+                    <div class="text-2xl font-extrabold text-slate-700 mt-1"><span id="pitchVal">0.0</span>°</div>
+                    <span id="pitchStatus" class="text-[11px] text-emerald-600 font-medium">สรีระตรงตามหลักการ</span>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <span class="text-xs text-slate-400">มุมเอียง (Roll)</span>
+                    <div class="text-2xl font-extrabold text-slate-700 mt-1"><span id="rollVal">0.0</span>°</div>
+                    <span class="text-[11px] text-slate-500 font-medium">สมดุลดี</span>
+                </div>
+                <div class="col-span-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex justify-between items-center">
+                    <span class="text-xs text-slate-600">ตำแหน่งศูนย์อ้างอิง (Tare Offset)</span>
+                    <button onclick="tareSensor()" class="text-xs bg-white border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-100">เทียบศูนย์ 0° ขณะนั่งหลังตรง</button>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- ปุ่มทดสอบระบบสั่น -->
-    <button onclick="triggerVibration()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium py-2.5 rounded-xl transition">
-        📳 ทดสอบระบบสั่นมือถือ
-    </button>
+    <!-- Simulation Tester Panel -->
+    <div class="bg-amber-50 border border-amber-200 p-3 rounded-2xl mb-4 text-xs">
+        <span class="font-semibold text-amber-800 block mb-1.5">⚡ ทดสอบโหมดจำลอง BNO055 (คลิกเพื่อทดสอบการแจ้งเตือนสั่น):</span>
+        <div class="flex flex-wrap gap-2">
+            <button onclick="simulateAngle(0)" class="bg-white border border-amber-300 px-3 py-1 rounded-lg hover:bg-amber-100">ตัวตรง 0° (ปกติ)</button>
+            <button onclick="simulateAngle(15)" class="bg-white border border-amber-300 px-3 py-1 rounded-lg hover:bg-amber-100">ก้ม 15° (ไม่เกินเกณฑ์)</button>
+            <button onclick="simulateAngle(25)" class="bg-emerald-600 text-white px-3 py-1 rounded-lg shadow-sm">ก้ม 25° (⚠️ เตือนสั่น)</button>
+            <button onclick="simulateAngle(40)" class="bg-red-500 text-white px-3 py-1 rounded-lg shadow-sm">ก้ม 40° (🚨 หลังค่อมมาก)</button>
+        </div>
+    </div>
 
-    <!-- ส่วนเขียนโค้ดเชื่อมต่อบลูทูธ (Web Bluetooth API) -->
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200">
+            <span class="text-xs text-slate-400 block">ก้มเกิน 20° วันนี้</span>
+            <div class="text-2xl font-extrabold text-slate-700 mt-1"><span id="errorCount">0</span> ครั้ง</div>
+            <span class="text-[10px] text-slate-400">เป้าหมาย: < 15 ครั้ง/วัน</span>
+        </div>
+        <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200">
+            <span class="text-xs text-slate-400 block">เวลาก้มค้างสะสมวันนี้</span>
+            <div class="text-2xl font-extrabold text-amber-600 mt-1"><span id="totalDuration">0</span> วินาที</div>
+            <span class="text-[10px] text-slate-400">เฉลี่ยต่อรอบ: 0.0 วิ</span>
+        </div>
+        <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200">
+            <span class="text-xs text-slate-400 block">คะแนนการศาสตร์</span>
+            <div class="text-2xl font-extrabold text-emerald-600 mt-1">100%</div>
+            <span class="text-[10px] text-emerald-600 font-medium">ดีเยี่ยม (มุม ≤ 20°)</span>
+        </div>
+        <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200">
+            <span class="text-xs text-slate-400 block">สถิติสะสม 30 วัน</span>
+            <div class="text-2xl font-extrabold text-blue-600 mt-1">239 ครั้ง</div>
+            <span class="text-[10px] text-slate-400">เฉลี่ยวันละ 8.0 ครั้ง</span>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+            <h3 class="text-xs font-semibold text-slate-500 mb-3">📈 แนวโน้มสถิติก้มผิดท่า (Daily Trend)</h3>
+            <canvas id="dailyChart" height="140"></canvas>
+        </div>
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+            <h3 class="text-xs font-semibold text-slate-500 mb-3">⏰ ช่วงเวลาที่เกิดเหตุการณ์บ่อย</h3>
+            <canvas id="hourlyChart" height="140"></canvas>
+        </div>
+    </div>
+
+    <!-- Logs Table -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6">
+        <div class="flex justify-between items-center mb-3">
+            <h3 class="text-xs font-semibold text-slate-500">📋 บันทึกเวลาจริงที่เกิดเหตุการณ์เกิน 20°</h3>
+            <div class="flex gap-2">
+                <button onclick="exportCSV()" class="text-xs bg-slate-100 px-2.5 py-1 rounded-lg hover:bg-slate-200">📥 ดาวน์โหลด CSV</button>
+            </div>
+        </div>
+        <div class="overflow-x-auto max-h-60">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-400 sticky top-0">
+                    <tr>
+                        <th class="p-2">เวลา (Real-Time)</th>
+                        <th class="p-2">วันที่</th>
+                        <th class="p-2">ท่าทาง</th>
+                        <th class="p-2">มุมสูงสุด</th>
+                        <th class="p-2">ระยะเวลาก้มค้าง</th>
+                        <th class="p-2">การสั่น</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody" class="divide-y divide-slate-100">
+                    <tr>
+                        <td colspan="6" class="p-4 text-center text-slate-400">ยังไม่มีประวัติการก้มผิดท่าวันนี้</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <script>
         let bluetoothDevice;
         let bluetoothCharacteristic;
         let errorCount = 0;
+        let totalSec = 0;
+        let logData = [];
 
-        // กำหนด UUID ให้ตรงกับโค้ดในบอร์ด ESP32
         const SERVICE_UUID = "12345678-1234-1234-1234-1234567890ab";
         const CHARACTERISTIC_UUID = "87654321-4321-4321-4321-ba0987654321";
 
+        // Bluetooth Connection
         document.getElementById('connectBtn').addEventListener('click', async () => {
             try {
-                document.getElementById('statusBadge').innerText = "กำลังค้นหา...";
-                document.getElementById('statusBadge').className = "text-xs px-3 py-1 bg-yellow-100 text-yellow-600 rounded-full font-medium";
-
-                // เปิดหน้าต่างสแกนหาบลูทูธ ESP32
+                document.getElementById('connectBtn').innerText = "กำลังค้นหา...";
                 bluetoothDevice = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
                     optionalServices: [SERVICE_UUID]
                 });
-
                 const server = await bluetoothDevice.gatt.connect();
                 const service = await server.getPrimaryService(SERVICE_UUID);
                 bluetoothCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
-
-                // เริ่มรับข้อมูลแบบเรียลไทม์
                 await bluetoothCharacteristic.startNotifications();
-                bluetoothCharacteristic.addEventListener('characteristicvaluechanged', handleIncomingData);
-
-                document.getElementById('statusBadge').innerText = "เชื่อมต่อแล้ว";
-                document.getElementById('statusBadge').className = "text-xs px-3 py-1 bg-emerald-100 text-emerald-600 rounded-full font-medium";
-                document.getElementById('connectBtn').innerText = "เชื่อมต่อสำเร็จ ✅";
-                document.getElementById('connectBtn').classList.remove('bg-emerald-600');
-                document.getElementById('connectBtn').classList.add('bg-slate-700');
-
+                bluetoothCharacteristic.addEventListener('characteristicvaluechanged', handleBluetoothData);
+                document.getElementById('connectBtn').innerText = "เชื่อมต่อแล้ว ✅";
+                document.getElementById('connectBtn').classList.replace('bg-emerald-600', 'bg-slate-700');
             } catch (error) {
                 console.error(error);
-                document.getElementById('statusBadge').innerText = "เชื่อมต่อไม่สำเร็จ";
-                document.getElementById('statusBadge').className = "text-xs px-3 py-1 bg-red-100 text-red-600 rounded-full font-medium";
+                document.getElementById('connectBtn').innerText = "เชื่อมต่อไม่สำเร็จ ❌";
             }
         });
 
-        // ฟังก์ชันรับข้อมูลจาก ESP32
-        function handleIncomingData(event) {
+        function handleBluetoothData(event) {
             const value = new TextDecoder().decode(event.target.value);
-            document.getElementById('angleVal').innerText = value + "°";
+            let angle = parseFloat(value) || 0;
+            updateDashboard(angle, 0.1);
+        }
 
-            let angle = parseFloat(value);
-            if (angle > 20) { // สมมติถ้าก้มเกิน 20 องศาถือว่าผิดท่า
+        function simulateAngle(angle) {
+            updateDashboard(angle, 2.5);
+        }
+
+        function updateDashboard(pitch, roll) {
+            document.getElementById('pitchVal').innerText = pitch.toFixed(1);
+            document.getElementById('rollVal').innerText = roll.toFixed(1);
+
+            // Update SVG rotation indicator
+            const indicator = document.getElementById('spineIndicator');
+            const node = document.getElementById('sensorNode');
+            const arc = document.getElementById('dangerArc');
+            
+            if (pitch > 20) {
+                indicator.setAttribute('stroke', '#ef4444');
+                node.setAttribute('fill', '#ef4444');
+                arc.classList.remove('opacity-0');
+                document.getElementById('pitchStatus').innerText = "⚠️ เตือน: หลังค่อม/ก้มเกิน 20°";
+                document.getElementById('pitchStatus').className = "text-[11px] text-red-500 font-bold";
+
+                // Trigger phone vibration
+                if ("vibrate" in navigator) {
+                    navigator.vibrate([300, 100, 300, 100, 500]);
+                }
+
+                // Add to logs & stats
                 errorCount++;
-                document.getElementById('countVal').innerText = errorCount;
-                document.getElementById('statusText').innerText = "⚠️ เตือน: หลังค่อม/ก้มตัวเกินกำหนด!";
-                document.getElementById('statusText').className = "text-lg font-bold text-red-500";
-                
-                // สั่งมือถือสั่นแจ้งเตือนทันที!
-                triggerVibration();
+                totalSec += 4.5;
+                document.getElementById('errorCount').innerText = errorCount;
+                document.getElementById('totalDuration').innerText = totalSec.toFixed(0);
+
+                const now = new Date();
+                const timeStr = now.toTimeString().split(' ')[0] + " น.";
+                const dateStr = now.toISOString().split('T')[0];
+
+                logData.unshift({
+                    time: timeStr,
+                    date: dateStr,
+                    type: pitch > 35 ? "ก้มหน้ามาก / หลังค่อม" : "เอียงตัวซ้าย/ขวา",
+                    angle: "+" + pitch.toFixed(1) + "°",
+                    duration: "4.5 วินาที",
+                    vibrate: pitch > 35 ? "สั่นสูง" : "สั่นปานกลาง"
+                });
+
+                renderTable();
             } else {
-                document.getElementById('statusText').innerText = "✅ ท่าทางปกติ";
-                document.getElementById('statusText').className = "text-lg font-bold text-emerald-600";
+                indicator.setAttribute('stroke', '#10b981');
+                node.setAttribute('fill', '#10b981');
+                arc.classList.add('opacity-0');
+                document.getElementById('pitchStatus').innerText = "สรีระตรงตามหลักการ";
+                document.getElementById('pitchStatus').className = "text-[11px] text-emerald-600 font-medium";
             }
         }
 
-        // ฟังก์ชันสั่งมือถือสั่น
-        function triggerVibration() {
-            if ("vibrate" in navigator) {
-                navigator.vibrate([300, 100, 300]); // สั่น 2 จังหวะ
-            }
+        function renderTable() {
+            const tbody = document.getElementById('logTableBody');
+            tbody.innerHTML = logData.map(item => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-2 font-medium">${item.time}</td>
+                    <td class="p-2 text-slate-500">${item.date}</td>
+                    <td class="p-2 text-amber-600 font-medium">${item.type}</td>
+                    <td class="p-2 font-bold">${item.angle}</td>
+                    <td class="p-2">${item.duration}</td>
+                    <td class="p-2"><span class="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[10px]">${item.vibrate}</span></td>
+                </tr>
+            `).join('');
         }
+
+        function tareSensor() {
+            alert("เทียบศูนย์เซ็นเซอร์ BNO055 สำเร็จ (0° เรียบร้อย)");
+        }
+
+        function exportCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,Time,Date,Type,Angle,Duration,Vibration\n" 
+                + logData.map(e => ${e.time},${e.date},${e.type},${e.angle},${e.duration},${e.vibrate}).join("\n");
+            let encodedUri = encodeURI(csvContent);
+            let link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "TrunkTrack_Ergonomics_Log.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Initialize Charts
+        const ctxDaily = document.getElementById('dailyChart').getContext('2d');
+        new Chart(ctxDaily, {
+            type: 'bar',
+            data: {
+                labels: ['10-18', '10-19', '10-20', '10-21', '10-22', '10-23', 'วันนี้'],
+                datasets: [{
+                    label: 'ครั้งที่ก้มเกิน 20°',
+                    data: [4, 12, 2, 5, 5, 4, 0],
+                    backgroundColor: ['#cbd5e1', '#ef4444', '#cbd5e1', '#cbd5e1', '#cbd5e1', '#cbd5e1', '#10b981'],
+                    borderRadius: 6
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+
+        const ctxHourly = document.getElementById('hourlyChart').getContext('2d');
+        new Chart(ctxHourly, {
+            type: 'bar',
+            data: {
+                labels: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00'],
+                datasets: [{
+                    label: 'ความถี่',
+                    data: [3, 5, 6, 8, 9, 1],
+                    backgroundColor: '#f87171',
+                    borderRadius: 4
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
     </script>
 </body>
 </html>
