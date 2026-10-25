@@ -125,15 +125,17 @@ function process(rawP,rawR){
   S.raw={p:rawP,r:rawR};
   const p = rawP-S.off.p, r = rawR-S.off.r, ang = Math.max(Math.abs(p),Math.abs(r));
   S.p=p; S.r=r;
-  const lvl = ang>60?3 : ang>20?2 : ang>(S.ev?4:5)?1 : 0;   // hysteresis กันค่ากระเพื่อม
+  const lvl = ang>60?3 : ang>20?2 : ang>(S.ev?4:5)?1 : 0;
   const dir = direction(p,r), now = Date.now();
   if(lvl===0){ if(S.ev) closeEvent(); S.alerted=0; }
-  else if(!S.ev){                                           // เริ่มทำผิดครั้งแรก → เตือน
+  else if(!S.ev){
     S.ev={t:now,dur:0,max:ang,dir,lvl};
-    S.alerted=lvl; alertUser(lvl,dir,ang);
-  } else {                                                  // ค้างอยู่ → เงียบ (เตือนซ้ำเฉพาะเมื่อรุนแรงขึ้นกว่าเดิม)
+    S.alerted=lvl; S.la={p,r}; S.lt=now; alertUser(lvl,dir,ang);
+  } else {
     if(ang>S.ev.max){S.ev.max=ang;S.ev.dir=dir;}
-    if(lvl>S.alerted){S.alerted=lvl;S.ev.lvl=lvl;alertUser(lvl,dir,ang);}
+    S.ev.lvl=Math.max(S.ev.lvl,lvl);
+    const moved=Math.max(Math.abs(p-S.la.p),Math.abs(r-S.la.r));
+    if(moved>=5 && now-S.lt>=1500){S.la={p,r};S.lt=now;alertUser(lvl,dir,ang);}
   }
   paint(ang,lvl,dir);
 }
