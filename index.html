@@ -118,7 +118,7 @@ function alertUser(lvl,dir,ang){
 
 /* ---------- ประมวลผลข้อมูลมุม ---------- */
 function direction(p,r){
-  if(Math.abs(p)>=Math.abs(r)) return p>0 ? 'ก้มหน้า' : 'แหงนหลัง';
+  if(Math.abs(p)>=Math.abs(r)) return p>0 ? 'แหงนหลัง' : 'ก้มหน้า';
   return r>0 ? 'เอียงขวา' : 'เอียงซ้าย';
 }
 function process(rawP,rawR){
